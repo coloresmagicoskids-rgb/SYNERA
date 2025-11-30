@@ -1,9 +1,10 @@
 {
+  "id": "/",
   "name": "SYNERA",
   "short_name": "SYNERA",
   "description": "Comunicación viva. Sentir es conversación.",
   "lang": "es",
-  "start_url": "/",
+  "start_url": "./",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -12,15 +13,15 @@
   "icons": [
     {
       "src": "/icons/synera-192.png",
-      "type": "image/png",
       "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/icons/synera-512.png",
-      "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -1,7 +1,7 @@
 // public/service-worker.js
 
 // 🧠 Versión de caché: súbela cuando hagas cambios importantes
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const STATIC_CACHE = `synera-static-${CACHE_VERSION}`;
 
 // 🧱 Archivos básicos que queremos tener siempre listos offline
@@ -32,20 +32,24 @@ self.addEventListener("activate", (event) => {
   console.log("[SW] Activando service worker…");
 
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
+    (async () => {
+      const keys = await caches.keys();
+
+      await Promise.all(
         keys
-          .filter((key) => key.startsWith("synera-static-") && key !== STATIC_CACHE)
+          .filter(
+            (key) => key.startsWith("synera-static-") && key !== STATIC_CACHE
+          )
           .map((key) => caches.delete(key))
       );
-    })
-  );
 
-  // Toma control de todas las pestañas abiertas
-  self.clients.claim();
+      // Toma control de todas las pestañas abiertas
+      await self.clients.claim();
+    })()
+  );
 });
 
-// 🛰️ Estrategia de red: 
+// 🛰️ Estrategia de red:
 //   - Navegación (HTML): network-first con fallback offline
 //   - Static assets (JS/CSS/imagenes): stale-while-revalidate
 self.addEventListener("fetch", (event) => {
@@ -65,6 +69,7 @@ self.addEventListener("fetch", (event) => {
           const copy = response.clone();
           caches.open(STATIC_CACHE).then((cache) => {
             cache.put("/", copy);
+            cache.put("/index.html", copy);
           });
           return response;
         })
@@ -102,9 +107,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // 3) Otros GET: intentamos red, si falla usamos caché
-  event.respondWith(
-    fetch(request).catch(() => caches.match(request))
-  );
+  event.respondWith(fetch(request).catch(() => caches.match(request)));
 });
 
 // 💌 Canal para mensajes desde la app (por ejemplo, para SKIP_WAITING)

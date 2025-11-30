@@ -2,13 +2,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
-
-// Estilos
 import "./styles/reset.css";
 import "./styles/theme.css";
 
-// 🔥 Registro del Service Worker para convertir SYNERA en APP instalable
-import "./service-worker-register.js";
+// ⬇️ IMPORTANTE: registrar el service worker
+import "./service-worker-register";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
