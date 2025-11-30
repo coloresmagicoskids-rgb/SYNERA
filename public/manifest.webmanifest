@@ -1,0 +1,26 @@
+{
+  "name": "SYNERA",
+  "short_name": "SYNERA",
+  "description": "Comunicación viva. Sentir es conversación.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050816",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/icons/synera-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/synera-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

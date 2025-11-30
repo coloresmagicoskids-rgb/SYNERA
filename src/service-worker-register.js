@@ -1,44 +1,54 @@
 // src/service-worker-register.js
 
+// Registro avanzado del Service Worker para SYNERA
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/service-worker.js")
-      .then((registration) => {
-        console.log("[PWA] SW registrado:", registration);
+    const swUrl = "/service-worker.js";
 
-        // 🔁 Detectar cuando hay una nueva versión del SW
+    navigator.serviceWorker
+      .register(swUrl)
+      .then((registration) => {
+        console.log("[SW-Register] Service worker registrado:", registration.scope);
+
+        // ▶️ Detectar nuevas versiones
         registration.addEventListener("updatefound", () => {
           const newWorker = registration.installing;
-          console.log("[PWA] Nueva versión de SW encontrada...");
+          console.log("[SW-Register] Nueva versión de SW encontrada…");
 
           if (!newWorker) return;
 
           newWorker.addEventListener("statechange", () => {
-            console.log("[PWA] SW state:", newWorker.state);
+            console.log("[SW-Register] Estado del nuevo SW:", newWorker.state);
 
-            // Cuando la nueva versión está instalada y ya hay uno viejo activo
-            if (
-              newWorker.state === "installed" &&
-              navigator.serviceWorker.controller
-            ) {
-              console.log("[PWA] Nueva versión lista, enviando SKIP_WAITING");
-              newWorker.postMessage({ type: "SKIP_WAITING" });
+            // Cuando la nueva versión está lista:
+            if (newWorker.state === "installed") {
+              if (navigator.serviceWorker.controller) {
+                // Ya había uno: hay una actualización
+                console.log("[SW-Register] Nueva versión instalada. Activando…");
+
+                // Pedimos al SW que haga skipWaiting
+                newWorker.postMessage({ type: "SKIP_WAITING" });
+              } else {
+                // Primera instalación
+                console.log("[SW-Register] Service worker instalado por primera vez.");
+              }
             }
           });
         });
 
-        // 🌀 Cuando el controlador cambia → recargamos UNA vez la app
-        let refreshing = false;
+        // 🔄 Cuando el controlador cambia → recargamos para usar la nueva versión
         navigator.serviceWorker.addEventListener("controllerchange", () => {
-          if (refreshing) return;
-          refreshing = true;
-          console.log("[PWA] Controlador SW cambiado, recargando SYNERA...");
-          window.location.reload();
+          console.log("[SW-Register] Controlador SW cambiado. Recargando página…");
+          // Evitar loops locos
+          if (!window.__syneraReloader__) {
+            window.__syneraReloader__ = true;
+            window.location.reload();
+          }
         });
       })
-      .catch((error) => {
-        console.log("[PWA] Error registrando SW:", error);
+      .catch((err) => {
+        console.error("[SW-Register] Error registrando service worker:", err);
       });
   });
 }
