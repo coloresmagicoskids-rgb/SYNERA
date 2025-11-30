@@ -1,0 +1,23 @@
+{
+  "name": "SYNERA",
+  "short_name": "SYNERA",
+  "description": "Universo de sensaciones y conexión emocional.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050816",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/synera-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/synera-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
