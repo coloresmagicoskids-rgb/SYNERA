@@ -1,20 +1,23 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <title>SYNERA</title>
+<head>
+  <meta charset="UTF-8" />
+  <title>SYNERA</title>
 
-    <!-- PWA: manifest -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+  <!-- PWA: manifest de la app -->
+  <link rel="manifest" href="/manifest.json" />
 
-    <!-- PWA: color de la barra del navegador / status bar -->
-    <meta name="theme-color" content="#7c3aed" />
+  <!-- PWA: color de la barra del navegador (Android) -->
+  <meta name="theme-color" content="#7c3aed" />
 
-    <!-- Móvil: que use pantalla completa -->
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+  <!-- Móvil: pantalla completa y escala correcta -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- React inicia aquí -->
+  <script type="module" src="/src/main.jsx"></script>
+</body>
 </html>
