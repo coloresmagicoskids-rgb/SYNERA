@@ -1,32 +1,29 @@
-// src/synera/api/syneraSocial.js
-import { supabase } from "../../supabaseClient";
+// src/synera-api/syneraSocial.js
+import { supabase } from "../supabaseClient";
 
-/**
- * Pequeño helper para obtener el usuario autenticado
- * Lanza error si no hay sesión.
- */
-async function getCurrentUserOrThrow() {
+/* -------------------------
+   AUTENTICACIÓN UTIL
+-------------------------- */
+
+async function getCurrentUser() {
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-
-  if (error) throw error;
-  if (!user) throw new Error("No hay usuario autenticado");
-
+  if (error || !user) throw error || new Error("No hay usuario logueado");
   return user;
 }
 
-/**
- * Buscar usuario por email o alias
- * - Usa la tabla "profiles" (id, alias, email)
- * - Retorna un único usuario o null si no existe
- */
+/* -------------------------
+   BÚSQUEDA DE USUARIOS
+-------------------------- */
+
+// Buscar usuario por email o alias
 export async function findUserByEmailOrAlias({ email, alias }) {
   let query = supabase.from("profiles").select("id, alias, email");
 
   if (email) {
-    query = query.ilike("email", email); // búsqueda sin distinción de mayúsculas
+    query = query.ilike("email", email);
   } else if (alias) {
     query = query.ilike("alias", alias);
   } else {
@@ -35,16 +32,16 @@ export async function findUserByEmailOrAlias({ email, alias }) {
 
   const { data, error } = await query.maybeSingle();
   if (error) throw error;
-  return data; // { id, alias, email } o null
+  return data; // { id, alias, email } | null
 }
 
-/**
- * Crear / enviar solicitud de contacto
- * - Crea un registro en la tabla "contacts"
- * - status: "pending" por defecto
- */
+/* -------------------------
+   CONTACTOS
+-------------------------- */
+
+// Enviar solicitud de contacto
 export async function sendContactRequest(friendId) {
-  const user = await getCurrentUserOrThrow();
+  const user = await getCurrentUser();
 
   const { data, error } = await supabase
     .from("contacts")
@@ -60,10 +57,7 @@ export async function sendContactRequest(friendId) {
   return data;
 }
 
-/**
- * Aceptar una solicitud de contacto
- * - Actualiza el contacto a status = "accepted"
- */
+// Aceptar solicitud de contacto
 export async function acceptContact(contactId) {
   const { data, error } = await supabase
     .from("contacts")
@@ -76,65 +70,180 @@ export async function acceptContact(contactId) {
   return data;
 }
 
-/**
- * Obtener todos mis contactos aceptados
- * - Devuelve filas de la tabla "contacts"
- * - Incluye contactos donde soy user_id o friend_id
- * - status = "accepted"
- */
-export async function getMyContacts() {
-  const user = await getCurrentUserOrThrow();
+// Listar contactos aceptados (tus amigos)
+export async function listContacts() {
+  const user = await getCurrentUser();
 
   const { data, error } = await supabase
     .from("contacts")
-    .select("*")
-    .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-    .eq("status", "accepted")
-    .order("created_at", { ascending: false });
+    .select(
+      `
+      id,
+      status,
+      friend:friend_id (
+        id,
+        alias,
+        email
+      )
+    `
+    )
+    .eq("user_id", user.id)
+    .eq("status", "accepted");
 
   if (error) throw error;
   return data || [];
 }
 
-/**
- * Enviar una sensación a un contacto
- * - Usa la tabla "sensations"
- * - intensity: "suave" | "media" | "alta"
- * - message: opcional, por si luego quieres agregar texto
- */
-export async function sendSensation({ receiverId, intensity, message }) {
-  const user = await getCurrentUserOrThrow();
+/* -------------------------
+   SENSACIONES
+-------------------------- */
 
-  const { data, error } = await supabase
+export async function sendSensation({ receiverId, intensity }) {
+  const user = await getCurrentUser();
+
+  // 1) Guardar sensación
+  const { data: sensation, error } = await supabase
     .from("sensations")
     .insert({
       sender_id: user.id,
       receiver_id: receiverId,
-      intensity,
-      message: message || null,
+      intensity, // 'soft' | 'medium' | 'high'
     })
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+
+  // 2) Crear notificación para el receptor
+  const notify = await supabase.from("notifications").insert({
+    user_id: receiverId,
+    type: "sensation",
+    data: {
+      from_id: user.id,
+      intensity,
+      created_at: new Date().toISOString(),
+    },
+  });
+
+  if (notify.error) {
+    console.warn("No se pudo crear notificación de sensación:", notify.error);
+  }
+
+  return sensation;
 }
 
-/**
- * Obtener el historial de sensaciones con otra persona
- * - Puedes usarlo para mostrar un historial entre tú y tu esposa
- */
-export async function getSensationsWithContact(otherUserId) {
-  const user = await getCurrentUserOrThrow();
+// Historial de sensaciones (enviadas y recibidas)
+export async function listMySensations() {
+  const user = await getCurrentUser();
 
   const { data, error } = await supabase
     .from("sensations")
-    .select("*")
-    .or(
-      `and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`
+    .select(
+      `
+      id,
+      intensity,
+      created_at,
+      sender:sender_id ( id, alias, email ),
+      receiver:receiver_id ( id, alias, email )
+    `
     )
+    .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
   return data || [];
+}
+
+/* -------------------------
+   MENSAJES DE TEXTO
+-------------------------- */
+
+// Enviar mensaje a un usuario
+export async function sendMessage({ receiverId, content }) {
+  const user = await getCurrentUser();
+
+  const { data: message, error } = await supabase
+    .from("messages")
+    .insert({
+      sender_id: user.id,
+      receiver_id: receiverId,
+      content,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Notificación para el receptor
+  const notify = await supabase.from("notifications").insert({
+    user_id: receiverId,
+    type: "message",
+    data: {
+      from_id: user.id,
+      preview: content.slice(0, 80),
+      created_at: new Date().toISOString(),
+    },
+  });
+
+  if (notify.error) {
+    console.warn("No se pudo crear notificación de mensaje:", notify.error);
+  }
+
+  return message;
+}
+
+// Obtener conversación con una persona concreta
+export async function getConversationWith(otherUserId) {
+  const user = await getCurrentUser();
+
+  const { data, error } = await supabase
+    .from("messages")
+    .select(
+      `
+      id,
+      content,
+      created_at,
+      sender_id,
+      receiver_id
+    `
+    )
+    .or(
+      `and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`
+    )
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/* -------------------------
+   NOTIFICACIONES
+-------------------------- */
+
+// Listar mis notificaciones (no leídas primero)
+export async function listNotifications() {
+  const user = await getCurrentUser();
+
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id, type, data, created_at, read")
+    .eq("user_id", user.id)
+    .order("read", { ascending: true })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Marcar una notificación como leída
+export async function markNotificationRead(id) {
+  const { data, error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
