@@ -12,8 +12,8 @@ function SendSensationScreen({ user, contacts, onBack, onSend }) {
     contacts.find((c) => c.id === selectedContactId) || null;
 
   const handleSend = () => {
-    if (!user || (!user.phone && !user.email)) {
-      alert("Primero debes completar tu usuario (teléfono o correo).");
+    if (!user || !user.email) {
+      alert("Primero debes completar tu usuario.");
       return;
     }
 
@@ -22,23 +22,13 @@ function SendSensationScreen({ user, contacts, onBack, onSend }) {
       return;
     }
 
-    if (!selectedContact.phone && !selectedContact.email) {
-      alert("Este contacto no tiene número ni correo configurado.");
-      return;
-    }
-
     const payload = {
-      // QUIÉN ENVÍA
-      sender_email: user.email || null,
-      sender_phone: user.phone || null,
+      sender_email: user.email,
       sender_alias: user.alias,
 
-      // QUIÉN RECIBE
-      receiver_email: selectedContact.email || null,
-      receiver_phone: selectedContact.phone || null,
+      receiver_email: selectedContact.email,
       receiver_alias: selectedContact.alias,
 
-      // CONTENIDO EMOCIONAL
       intensity,
       label,
       color: selectedContact.avatar_color || "#a855f7",
@@ -48,65 +38,69 @@ function SendSensationScreen({ user, contacts, onBack, onSend }) {
   };
 
   return (
-    <div className="synera-panel">
-      <button className="synera-back" onClick={onBack}>
-        Volver
-      </button>
+    <div className="synera-screen">
+      <div className="synera-card">
+        <button className="synera-back" onClick={onBack}>
+          Volver
+        </button>
 
-      <h2>Enviar sensación</h2>
+        <h2>Enviar sensación</h2>
 
-      <div className="synera-field">
-        <label>Para</label>
-        <select
-          value={selectedContactId || ""}
-          onChange={(e) => setSelectedContactId(e.target.value)}
-        >
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.alias}{" "}
-              {c.phone ? `(${c.phone})` : c.email ? `(${c.email})` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="synera-field">
-        <label>Tipo de sensación</label>
-        <select value={label} onChange={(e) => setLabel(e.target.value)}>
-          <option value="ánimo">Ánimo</option>
-          <option value="gratitud">Gratitud</option>
-          <option value="calma">Calma</option>
-          <option value="amor">Amor</option>
-        </select>
-      </div>
-
-      <div className="synera-field">
-        <label>Intensidad</label>
-        <div className="synera-intensity-row">
-          <button
-            className={intensity === "suave" ? "active" : ""}
-            onClick={() => setIntensity("suave")}
+        {/* Campo: contacto */}
+        <div className="synera-field">
+          <label>Para</label>
+          <select
+            value={selectedContactId || ""}
+            onChange={(e) => setSelectedContactId(e.target.value)}
           >
-            Suave
-          </button>
-          <button
-            className={intensity === "media" ? "active" : ""}
-            onClick={() => setIntensity("media")}
-          >
-            Media
-          </button>
-          <button
-            className={intensity === "alta" ? "active" : ""}
-            onClick={() => setIntensity("alta")}
-          >
-            Alta
-          </button>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.alias} ({c.email})
+              </option>
+            ))}
+          </select>
         </div>
-      </div>
 
-      <button className="synera-main-btn" onClick={handleSend}>
-        Enviar sensación
-      </button>
+        {/* Campo: tipo */}
+        <div className="synera-field">
+          <label>Tipo de sensación</label>
+          <select value={label} onChange={(e) => setLabel(e.target.value)}>
+            <option value="ánimo">Ánimo</option>
+            <option value="gratitud">Gratitud</option>
+            <option value="calma">Calma</option>
+            <option value="amor">Amor</option>
+          </select>
+        </div>
+
+        {/* Intensidad */}
+        <div className="synera-field">
+          <label>Intensidad</label>
+          <div className="synera-intensity-row">
+            <button
+              className={intensity === "suave" ? "active" : ""}
+              onClick={() => setIntensity("suave")}
+            >
+              Suave
+            </button>
+            <button
+              className={intensity === "media" ? "active" : ""}
+              onClick={() => setIntensity("media")}
+            >
+              Media
+            </button>
+            <button
+              className={intensity === "alta" ? "active" : ""}
+              onClick={() => setIntensity("alta")}
+            >
+              Alta
+            </button>
+          </div>
+        </div>
+
+        <button className="synera-main-btn" onClick={handleSend}>
+          Enviar sensación
+        </button>
+      </div>
     </div>
   );
 }
