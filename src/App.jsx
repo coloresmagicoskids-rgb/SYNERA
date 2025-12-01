@@ -98,8 +98,50 @@ function App() {
     syncUserAndData();
   }, [user]);
 
-  // 🔔 Realtime sensaciones (ya lo tienes añadido tú)
-  // ... aquí mantienes tu useEffect de realtime si ya está en el archivo ...
+  // 🔔 Realtime: escuchar nuevas sensaciones para este usuario
+  useEffect(() => {
+    if (!user || !supabase || !user.email) return;
+
+    const channel = supabase
+      .channel("synera_sensations_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "synera_sensations",
+          filter: `receiver_email=eq.${user.email}`,
+        },
+        (payload) => {
+          console.log("💜 Nueva sensación recibida:", payload);
+          const newSens = payload.new;
+
+          setSensations((prev) => [
+            {
+              id: newSens.id,
+              sender_email: newSens.sender_email,
+              receiver_email: newSens.receiver_email,
+              intensity: newSens.intensity,
+              note: newSens.note,
+              label: newSens.label,
+              color: newSens.color,
+              sender_alias: newSens.sender_alias,
+              receiver_alias: newSens.receiver_alias,
+              created_at: newSens.created_at,
+            },
+            ...prev,
+          ]);
+        }
+      )
+      .subscribe((status) => {
+        console.log("Estado Realtime SYNERA:", status);
+      });
+
+    // Limpieza al cambiar de usuario o desmontar
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const handleSplashDone = () => setStage("auth");
 
