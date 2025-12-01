@@ -7,7 +7,7 @@ import HomeScreen from "./screens/HomeScreen.jsx";
 import ContactsScreen from "./screens/ContactsScreen.jsx";
 import SendSensationScreen from "./screens/SendSensationScreen.jsx";
 import InboxScreen from "./screens/InboxScreen.jsx";
-import LinksScreen from "./screens/LinksScreen.jsx"; // 🔹 NUEVO
+import LinksScreen from "./screens/LinksScreen.jsx"; // 🆕 VÍNCULOS
 import { supabase } from "./supabase/supabaseClient.js";
 
 // "splash" -> "auth" -> "setup-avatar" -> "home" -> "contacts" / "send" / "inbox" / "links"
@@ -32,16 +32,13 @@ function App() {
 
   const [sensations, setSensations] = useState([]);
 
-  // 🔗 NUEVO: estado de vínculos
-  const [links, setLinks] = useState([]);
-
-  // 🔁 Sincronizar usuario + datos desde Supabase
+  // 🔁 Sincronización con Supabase cuando haya usuario
   useEffect(() => {
     if (!user || !supabase || !user.email) return;
 
     const syncUserAndData = async () => {
       try {
-        // 1) Guardar/actualizar usuario básico
+        // 1) Usuario básico
         await supabase.from("synera_users").upsert(
           {
             email: user.email,
@@ -51,18 +48,20 @@ function App() {
           { onConflict: "email" }
         );
 
-        // 2) Cargar sensaciones donde esté involucrado
+        // 2) Sensaciones donde participa
         const { data: sensData, error: sensError } = await supabase
           .from("synera_sensations")
           .select("*")
-          .or(`sender_email.eq.${user.email},receiver_email.eq.${user.email}`)
+          .or(
+            `sender_email.eq.${user.email},receiver_email.eq.${user.email}`
+          )
           .order("created_at", { ascending: false });
 
         if (!sensError && sensData) {
           setSensations(sensData);
         }
 
-        // 3) Cargar contactos del usuario (si los hay)
+        // 3) Contactos del usuario
         const { data: contactData, error: contactError } = await supabase
           .from("synera_contacts")
           .select("*")
@@ -79,17 +78,6 @@ function App() {
             }))
           );
         }
-
-        // 4) 🔗 Cargar vínculos
-        const { data: linksData, error: linksError } = await supabase
-          .from("synera_links")
-          .select("*")
-          .eq("owner_email", user.email)
-          .order("bond_level", { ascending: false });
-
-        if (!linksError && linksData) {
-          setLinks(linksData);
-        }
       } catch (err) {
         console.error("Error sincronizando con Supabase", err);
       }
@@ -98,9 +86,48 @@ function App() {
     syncUserAndData();
   }, [user]);
 
-  // 🔔 Realtime sensaciones (ya lo tienes añadido tú)
-  // ... aquí mantienes tu useEffect de realtime si ya está en el archivo ...
+  // 🔔 Realtime: escuchar nuevas sensaciones para este usuario
+  useEffect(() => {
+    if (!user || !supabase || !user.email) return;
 
+    const channel = supabase
+      .channel("synera_sensations_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "synera_sensations",
+          filter: `receiver_email=eq.${user.email}`,
+        },
+        (payload) => {
+          console.log("💜 Nueva sensación recibida:", payload);
+          const newSens = payload.new;
+
+          setSensations((prev) => [
+            {
+              id: newSens.id,
+              sender_email: newSens.sender_email,
+              receiver_email: newSens.receiver_email,
+              intensity: newSens.intensity,
+              note: newSens.note,
+              label: newSens.label,
+              created_at: newSens.created_at,
+            },
+            ...prev,
+          ]);
+        }
+      )
+      .subscribe((status) => {
+        console.log("Estado Realtime SYNERA:", status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // ---- Handlers de flujo ----
   const handleSplashDone = () => setStage("auth");
 
   const handleAuthSuccess = (userData) => {
@@ -113,7 +140,6 @@ function App() {
     setStage("home");
   };
 
-  // CONTACTOS
   const handleOpenContacts = () => setStage("contacts");
   const handleBackFromContacts = () => setStage("home");
 
@@ -121,12 +147,7 @@ function App() {
     const localId = crypto.randomUUID
       ? crypto.randomUUID()
       : `local-${Date.now()}`;
-
-    const contactObj = {
-      ...newContact,
-      id: localId,
-    };
-
+    const contactObj = { ...newContact, id: localId };
     setContacts((prev) => [...prev, contactObj]);
 
     try {
@@ -143,16 +164,13 @@ function App() {
     }
   };
 
-  // ENVIAR SENSACIÓN
   const handleOpenSend = () => setStage("send");
   const handleBackFromSend = () => setStage("home");
 
   const handleSendSensation = async (payload) => {
     const full = {
       ...payload,
-      id: crypto.randomUUID
-        ? crypto.randomUUID()
-        : `sens-${Date.now()}`,
+      id: crypto.randomUUID ? crypto.randomUUID() : `sens-${Date.now()}`,
       created_at: new Date().toISOString(),
     };
 
@@ -163,12 +181,11 @@ function App() {
       if (supabase && user?.email) {
         await supabase.from("synera_sensations").insert({
           sender_email: full.sender_email,
-          sender_alias: full.sender_alias,
           receiver_email: full.receiver_email,
-          receiver_alias: full.receiver_alias,
-          color: full.color,
           intensity: full.intensity,
+          note: full.note || null,
           label: full.label,
+          color: full.color,
         });
       }
     } catch (err) {
@@ -176,73 +193,14 @@ function App() {
     }
   };
 
-  // INBOX
   const handleOpenInbox = () => setStage("inbox");
   const handleBackFromInbox = () => setStage("home");
 
-  // 🔗 VÍNCULOS
+  // 🆕 VÍNCULOS
   const handleOpenLinks = () => setStage("links");
   const handleBackFromLinks = () => setStage("home");
 
-  const handleAddLink = async (payload) => {
-    const localId = crypto.randomUUID
-      ? crypto.randomUUID()
-      : `link-${Date.now()}`;
-
-    const linkObj = {
-      id: localId,
-      owner_email: user.email,
-      ...payload,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    // Estado local inmediato
-    setLinks((prev) => [linkObj, ...prev]);
-
-    // Guardar en Supabase
-    try {
-      if (supabase && user?.email) {
-        await supabase.from("synera_links").insert({
-          owner_email: user.email,
-          linked_email: payload.linked_email,
-          linked_alias: payload.linked_alias,
-          bond_level: payload.bond_level,
-          note: payload.note,
-          color: payload.color,
-        });
-      }
-    } catch (err) {
-      console.error("Error guardando vínculo en Supabase", err);
-    }
-  };
-
-  const handleUpdateLinkLevel = async (linkId, newLevel) => {
-    // Estado local
-    setLinks((prev) =>
-      prev.map((l) =>
-        l.id === linkId ? { ...l, bond_level: newLevel } : l
-      )
-    );
-
-    // Supabase
-    try {
-      if (supabase && user?.email) {
-        await supabase
-          .from("synera_links")
-          .update({
-            bond_level: newLevel,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", linkId)
-          .eq("owner_email", user.email);
-      }
-    } catch (err) {
-      console.error("Error actualizando vínculo en Supabase", err);
-    }
-  };
-
-  // FLUJO DE PANTALLAS
+  // ---- Render por etapa ----
   if (stage === "splash") {
     return <SplashScreen onFinish={handleSplashDone} />;
   }
@@ -291,23 +249,21 @@ function App() {
     return (
       <LinksScreen
         user={user}
-        contacts={contacts}
-        links={links}
-        onAddLink={handleAddLink}
-        onUpdateLevel={handleUpdateLinkLevel}
         onBack={handleBackFromLinks}
+        sensations={sensations}
+        contacts={contacts}
       />
     );
   }
 
-  // HOME
+  // Home por defecto
   return (
     <HomeScreen
       user={user}
       onOpenContacts={handleOpenContacts}
       onOpenSend={handleOpenSend}
       onOpenInbox={handleOpenInbox}
-      onOpenLinks={handleOpenLinks} // 🔹 NUEVO
+      onOpenLinks={handleOpenLinks} // 🆕 pasa el handler
       lastSensation={sensations[0] || null}
     />
   );
