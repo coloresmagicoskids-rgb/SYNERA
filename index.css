@@ -1,0 +1,15 @@
+.synera-screen {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.synera-card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 24px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
