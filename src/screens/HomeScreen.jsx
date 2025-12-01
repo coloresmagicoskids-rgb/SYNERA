@@ -2,19 +2,33 @@
 import React, { useState } from "react";
 import AvatarEmocional from "../components/AvatarEmocional.jsx";
 
-function HomeScreen({ user, onOpenContacts, onOpenSend, onOpenInbox, lastSensation }) {
+function HomeScreen({
+  user,
+  onOpenContacts,
+  onOpenSend,
+  onOpenInbox,
+  onOpenLinks,
+  lastSensation,
+}) {
   const [intensity, setIntensity] = useState(2);
 
   return (
     <div className="synera-screen">
       <div className="synera-card">
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
           <div>
             <h2 className="synera-title" style={{ marginTop: 8 }}>
               Hola, {user?.alias || "alma luminosa"}
             </h2>
             <p className="synera-subtitle">
-              Este es tu núcleo emocional. Desde aquí SYNERA se conecta con otros.
+              Este es tu núcleo emocional. Desde aquí SYNERA se conecta con
+              otros.
             </p>
           </div>
 
@@ -52,8 +66,17 @@ function HomeScreen({ user, onOpenContacts, onOpenSend, onOpenInbox, lastSensati
           </div>
         </div>
 
-        <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
-          <AvatarEmocional color={user?.avatar_color || "#a45cff"} intensity={intensity} />
+        <div
+          style={{
+            marginBottom: 20,
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <AvatarEmocional
+            color={user?.avatar_color || "#a45cff"}
+            intensity={intensity}
+          />
         </div>
 
         <div style={{ marginBottom: 16 }}>
@@ -70,7 +93,10 @@ function HomeScreen({ user, onOpenContacts, onOpenSend, onOpenInbox, lastSensati
                   flex: 1,
                   padding: "8px 0",
                   borderRadius: 999,
-                  background: intensity === lvl ? "rgba(164,92,255,0.35)" : "rgba(255,255,255,0.03)",
+                  background:
+                    intensity === lvl
+                      ? "rgba(164,92,255,0.35)"
+                      : "rgba(255,255,255,0.03)",
                   color: "#f5f0ff",
                   fontSize: "0.85rem",
                 }}
@@ -81,14 +107,31 @@ function HomeScreen({ user, onOpenContacts, onOpenSend, onOpenInbox, lastSensati
           </div>
         </div>
 
-        <button
-          className="synera-button-primary"
-          type="button"
-          onClick={onOpenSend}
-          style={{ marginBottom: lastSensation ? 12 : 0 }}
+        {/* 🔹 Bloque de acciones principales */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            marginBottom: lastSensation ? 12 : 0,
+          }}
         >
-          Enviar sensación
-        </button>
+          <button className="synera-main-btn" onClick={onOpenContacts}>
+            Contactos
+          </button>
+
+          <button className="synera-main-btn" onClick={onOpenSend}>
+            Enviar sensación
+          </button>
+
+          <button className="synera-main-btn" onClick={onOpenInbox}>
+            Sensaciones
+          </button>
+
+          <button className="synera-main-btn" onClick={onOpenLinks}>
+            Vínculos
+          </button>
+        </div>
 
         {lastSensation && (
           <div
